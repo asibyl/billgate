@@ -1,27 +1,22 @@
-*.py[co]
-
-# Packages
-*.egg
+.DS_Store
+*.pyc
+test.db
+*.wpr
+.project
+.pydevproject
+.settings
 *.egg-info
-dist
-build
-eggs
-parts
-bin
-var
-sdist
-develop-eggs
-.installed.cfg
-
-# Installer logs
-pip-log.txt
-
-# Unit test / coverage reports
 .coverage
-.tox
-
-#Translations
-*.mo
-
-#Mr Developer
-.mr.developer.cfg
+docs/_build
+build/
+dist/
+.webassets-cache
+nosetests.xml
+.sass-cache
+instance/settings.py
+instance/testing.py
+instance/production.py
+instance/development.py
+baseframe-packed.css
+baseframe-packed.js
+error.log
