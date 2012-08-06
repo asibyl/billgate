@@ -1,7 +1,10 @@
+
 from billgate import app
-from billgate.models import Address, Payment
+from billgate.models import db
+from billgate.models.address import Address
+from billgate.models.payment import Payment
 from billgate.views.login import lastuser
-from billgate.forms import AddressForm
+from billgate.forms.address import AddressForm
 from flask import render_template, g, flash, json, redirect, url_for, request
 from flask import session
 from base64 import b64decode
@@ -9,9 +12,9 @@ from billgate.rc4 import crypt
 from datetime import datetime
 
 
-@app.route('/address/<ino>')
+@app.route('/address/<aid>')
 @lastuser.requires_login
-def select_address(ino=None, form=None):
+def select_address(aid=None, form=None):
     """
     Select an Address or enter a new one.
     """
@@ -19,15 +22,15 @@ def select_address(ino=None, form=None):
         form = AddressForm()
     context = {
         'user': g.user,
-        'addresses': Address.objects(user=g.user),
+        'addresses': Address.query.filter_by(user=g.user),
         'form': form,
         'title': 'Select Billing Address',
     }
     return render_template('address.html', **context)
 
-@app.route('/address/<ino>', methods=['POST'])
+@app.route('/address/<aid>', methods=['POST'])
 @lastuser.requires_login
-def process_select_address(ino=None):
+def process_select_address(aid=None):
     """
     Process a new address.
     """
@@ -35,14 +38,11 @@ def process_select_address(ino=None):
     if form.validate_on_submit():
         address = Address()
         form.populate_obj(address)
+        address.make_id()
         address.user = g.user
-        address.save()
-        #Save the address details into the invoice
-        for suffix in ['address1', 'address2', 'city', 'state', 'country']:
-            setattr(invoice, ''.join(['billing_', suffix]), getattr(address,
-                suffix))
-            setattr(invoice, ''.join(['shipping_', suffix]), getattr(address,
-                suffix))
+        db.session.add(address)
+        db.session.commit()
+        session['address'] = getattr(address, 'hashkey', None)
         return redirect(url_for('select_payment'))
     else:
         flash("Please check your details and try again.", 'error')
@@ -54,9 +54,8 @@ def select_existing_address(aid):
     """
     Process an existing address.
     """
-    address = Address.objects(hashkey=aid).first()
+    address = Address.query.get(hashkey=aid).first()
     session['address'] = getattr(address, 'hashkey', None)
-    for suffix in ['address_text', 'city', 'state', 'country', 'postal_code']:
     return redirect(url_for('select_payment'))
 
 @app.route('/address/delete/<aid>')
@@ -65,7 +64,7 @@ def delete_address(aid):
     """
     Delete an address
     """
-    address = Address.objects(hashkey=aid).first()
+    address = Address.query.get(aid)
     address.delete()
     if request.referrer:
         next = request.referrer
@@ -77,7 +76,7 @@ def delete_address(aid):
 @app.route('/address/edit/<aid>')
 @lastuser.requires_login
 def edit_address(aid, form=None):
-    address = Address.objects(hashkey=aid).first()
+    address = Address.query.get(hashkey=aid).first()
     if form is None:
         form = AddressForm(obj=address)
     context = {
@@ -92,13 +91,14 @@ def process_edit_address(aid):
     """
     Edit an existing address
     """
-    address = Address.objects(hashkey=aid).first()
+    address = Address.query,get(hashkey=aid).first()
     form = AddressForm(obj=address)
     if form.validate_on_submit():
-        address = Address()
         form.populate_obj(address)
         address.user = g.user
-        address.save()
+        db.session.commit()
+        session['address'] = getattr(address, 'hashkey', None)
+
         return redirect(url_for('select_payment'))
     else:
         flash("Please check your details and try again.", 'error')
@@ -110,9 +110,13 @@ def select_payment():
     """
     Confirm details and make a payment.
     """
+    aid = session.get('address', None)
+    if aid is None:
+        return redirect(url_for('select_address'))
+    address = Address.query.filter_by(hashkey=aid).first()
     context = {
         'user': g.user,
-        'invoice': invoice,
+        'address': address,
         'title': 'Confirm Details',
     }
     return render_template('payment.html', **context)
@@ -131,7 +135,8 @@ def ebs_response():
         response_split[oneitem[0]] = oneitem[1]
     pay = Payment()
     pay.response = response_split
-    pay.save()
+    db.session.add(pay)
+    db.session.commit()
     context = {
         'data': data,
         'response': response_split,

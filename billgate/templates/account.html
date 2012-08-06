@@ -1,0 +1,22 @@
+{% extends "inc/layout.html" %}
+{% from 'macros.html' import renderform %}
+{% block content %}
+{{ profile.description|safe }}
+<div> 
+  {% if items -%}
+    <h2> Items Created by You</h2>
+    {% for items in items -%}
+      <li class="span2">
+          <span> {{ item.name }}</span> 
+          <span> {{ item.nos_available }}</span>
+          <span> {{ item.price_before_tax }}</span>
+          <span> {{ item.tax_rate }}</span>
+          <span> <a href="{{ url_for('edit_item', item_id=item.id) }}">Edit</a></span>
+        </li>
+    {% endfor -%}
+  {%- else -%}
+        <em>This {{ profile.type_label()|lower }} has not created any items yet.</em>
+  {%- endif %}
+</div>
+<div class="clear"></div>
+{% endblock %}

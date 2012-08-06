@@ -2,7 +2,7 @@
 
 from flask.ext.sqlalchemy import SQLAlchemy
 from billgate import app
-from coaster.sqlalchemy import IdMixin, TimestampMixin, BaseMixin, BaseNameMixin
+from coaster.sqlalchemy import BaseMixin, BaseNameMixin, BaseScopedNameMixin, BaseScopedIdNameMixin, BaseScopedIdMixin
 
 db = SQLAlchemy(app)
 

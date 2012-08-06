@@ -1,28 +1,25 @@
-from billgate.models import User
+from billgate.models import db, BaseMixin
+from billgate.models.transaction import Transaction
 from uuid import uuid4
 from datetime import datetime
 
+__all__ = ['Payment', 'PAYMENT_STATUS']
+
 class PAYMENT_STATUS:
-    INFO_REQD = 0
+    INITIATED = 0
     SUBMITTED = 1
     FAILED = 2
     COMPLETED = 3
     CANCELLED = 4
     REJECTED = 5
-    REFUNDED = 6
 
-class Payment(BaseScopedIdMixin, db.Model):
+class Payment(BaseMixin, db.Model):
     __tablename__ = 'payment'
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    user = db.relation(User, backref=db.backref('payments', cascade='all, delete-orphan'))
-    parent = db.synonym('user')
 
-    status = db.Column(db.Integer, nullable=False, default=PAYMENT_STATUS.INFO_REQD)
-    amount = db.Column(db.Float, default=0.0, nullable=True)
+    transaction_id = db.Column(db.Integer, db.ForeignKey('transaction.id'), nullable=False)
+
+    status = db.Column(db.Integer, nullable=False, default=PAYMENT_STATUS.INITIATED)
     response = db.Column(db.Unicode(1200), default=u'', nullable=True)
-
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.now) 
-    updated_at = db.Column(db.DateTime, nullable=False)
 
 
     def _get_responseAsDict(self):
