@@ -1,17 +1,20 @@
-from flask.ext.wtf import Form, TextField, SelectField
+
+from baseframe.forms import RichTextField
+from flask.ext.wtf import Form, TextField, SelectField, TextAreaField
 from flask.ext.wtf import Required, Email, Length, URL, ValidationError
 from flask.ext.wtf.html5 import EmailField
-from baseframe.staticdata import country_codes
 from billgate import app
+from billgate.models.address import countries
+
+
 
 class AddressForm(Form):
     name = TextField('Name', validators=[Required()])
-    address1 = TextField('Address 1', validators=[Required()])
-    address2 = TextField('Address 2', validators=[Required()])
+    address = TextAreaField('Address', validators=[Required()])
     city = TextField('City/District', validators=[Required()])
     state = TextField('State/Province', validators=[Required()])
     postal_code = TextField('Postal code (PIN/ZIP)', validators=[Required()])
-    country = SelectField('Country', validators=[Required()], choices=country_codes, default="IN")
+    country = SelectField('Country', validators=[Required()], choices=countries, default="IND")
     #phone = TextField('Phone', validators=[Required()], description="The telephone number associated with this address")
 
 

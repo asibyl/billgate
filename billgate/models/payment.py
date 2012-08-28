@@ -16,9 +16,10 @@ class PAYMENT_STATUS:
 class Payment(BaseMixin, db.Model):
     __tablename__ = 'payment'
 
-    transaction_id = db.Column(db.Integer, db.ForeignKey('transaction.id'), nullable=False)
+    invoice_id = db.Column(db.Integer, db.ForeignKey('invoice.id'), nullable=True)
 
     status = db.Column(db.Integer, nullable=False, default=PAYMENT_STATUS.INITIATED)
+
     response = db.Column(db.Unicode(1200), default=u'', nullable=True)
 
 

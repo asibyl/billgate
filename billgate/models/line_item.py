@@ -1,32 +1,44 @@
 from decimal import Decimal
 from datetime import datetime
+
 from flask import url_for
-from billgate.models import db, BaseMixin, BaseScopedNameMixin
-from billgate.models.user import User
+
+from billgate.models import db, BaseMixin
 from billgate.models.workspace import Workspace
+from billgate.models.category import Category
+from billgate.models.invoice import Invoice
 
 
-__all__ = ['Item','ITEM_STATUS', 'LineItem']
+__all__ = ['LineItem']
 
 
-# Item that can be purchased, along with inventory available and price
 class LineItem(BaseMixin, db.Model):
-    __tablename__ = 'Item'
+    """
+    A LineItem is part of an invoice. 
+    Each line item carries an item category, quantity, charged amount, tax rate & line total.
+    """
+    __tablename__ = 'lineitem'
     
-    #: Type of LineItem
-    item_id = db.Column(db.Integer, db.ForeignKey('item.id'), nullable=False)
-    item = db.relationship(Category, primaryjoin=item_id == Item.id)
+    #: Item category of this LineItem
+    category_id = db.Column(db.Integer, db.ForeignKey('category.id'), nullable=False)
+    category = db.relationship(Category, primaryjoin=category_id == Category.id)
 
-    #: Transaction to which this line item belongs
-    transaction_id = db.Column(db.Integer, db.ForeignKey('transaction.id'), nullable=False)
-    transaction = db.relationship(Transaction, primaryjoin=transaction_id == Transaction.id, 
+    #: Invoice to which this line item belongs
+    invoice_id = db.Column(db.Integer, db.ForeignKey('invoice.id'), nullable=False)
+    invoice = db.relationship(Invoice, primaryjoin=invoice_id == Invoice.id, 
         backref=db.backref('line_items', cascade='all, delete-orphan'))
-    parent = db.synonym('transaction')
-
+    
+    description = db.Column(db.Unicode(1200), default=u'', nullable=False)
+    price_before_tax = db.Column(db.Numeric(10, 2), nullable=False, default=Decimal('0.0'))
     quantity = db.Column(db.Integer, default=1, nullable=False)
-    line_amount_before_tax = db.Column(db.Numeric(10, 2), nullable=False, default=Decimal('0.0'))
-    line_total = db.Column(db.Numeric(10, 2), nullable=False, default=Decimal('0.0'))
+    tax_rate = db.Column(db.Numeric(2, 2), nullable=False, default=Decimal('0.0'))
+    line_amount_before_tax = db.Column(db.Numeric(10, 2), nullable=True)
+    line_total = db.Column(db.Numeric(10, 2), nullable=True)
+
+
+    def update_line_amount_before_tax(self):
+        self.line_amount_before_tax = self.quantity * self.price_before_tax
 
     def update_line_total(self):
-        #calculate line total
-        self.line_total = self.quantity * self.item.price_before_tax * self.item.tax_rate
+        self.update_line_amount_before_tax()
+        self.line_total = self.quantity * self.price_before_tax * (1 + self.tax_rate/100)

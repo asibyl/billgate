@@ -11,7 +11,7 @@
 </tr>
 
 <tr>
-<td class="datatype">Address</td> <td class="datavalue">{{ ' '.join([address.address1, address.address2]) }}</td>
+<td class="datatype">Address</td> <td class="datavalue">{{ address.address }}</td>
 </tr>
 
 <tr>
@@ -30,9 +30,6 @@
 <td class="datatype">Postal Code</td> <td class="datavalue">{{ address.postal_code }}</td>
 </tr>
 
-<tr>
-<td class="datatype">Email</td> <td class="datavalue">{{ user.email }}</td>
-</tr>
 
 
 </table>
@@ -45,12 +42,12 @@
 <input name="amount" type="hidden" value="0.0" />
 <input name="description" type="hidden" value="Testing Payment" />
 <input name="name" type="hidden" value="{{ address.name }}" />
-<input name="address" type="hidden" value="{{ ' '.join([address.address1, address.address2]) }}" />
+<input name="address" type="hidden" value="{{ address.address }}" />
 <input name="city" type="hidden" value="{{ address.city }}" />
 <input name="state" type="hidden" value="{{ address.state }}" />
 <input name="postal_code" type="hidden" value="{{ address.postal_code }}" />
 <input name="country" type="hidden" value="{{ address.country }}" />
-<input name="email" type="hidden" value="{{ user.email }}" />
+<input name="email" type="hidden" value="{{ address.email }}" />
 <input name="ship_name" type="hidden" value="{{ address.name }}" />
 <input name="ship_address" type="hidden" value="{{ ' '.join([address.address1, address.address2]) }}" />
 <input name="ship_city" type="hidden" value="{{ address.city }}" />

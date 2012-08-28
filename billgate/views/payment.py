@@ -1,10 +1,13 @@
+from flask import g, flash, url_for, render_template, request, redirect, abort, Response
+from coaster.views import load_model, load_models
+from coaster import format_currency as coaster_format_currency
+from baseframe.forms import render_form, render_redirect, render_delete_sqla, render_message, ConfirmDeleteForm
 
 from billgate import app
 from billgate.models import db
-from billgate.models.address import Address
-from billgate.models.payment import Payment
+from billgate.models import Address, Payment, Invoice, Workspace
 from billgate.views.login import lastuser
-from billgate.forms.address import AddressForm
+from billgate.forms import AddressForm
 from flask import render_template, g, flash, json, redirect, url_for, request
 from flask import session
 from base64 import b64decode
@@ -12,114 +15,102 @@ from billgate.rc4 import crypt
 from datetime import datetime
 
 
-@app.route('/address/<aid>')
+@app.route('/<workspace>/invoices/<invoice>/billaddress', methods=['GET', 'POST'])
+@load_models(
+    (Workspace, {'name': 'workspace'}, 'workspace'),
+    (Invoice, {'url_name': 'invoice', 'workspace': 'workspace'}, 'invoice')
+    )
 @lastuser.requires_login
-def select_address(aid=None, form=None):
+def select_address(invoice, workspace):
     """
-    Select an Address or enter a new one.
-    """
-    if form is None:
-        form = AddressForm()
-    context = {
-        'user': g.user,
-        'addresses': Address.query.filter_by(user=g.user),
-        'form': form,
-        'title': 'Select Billing Address',
-    }
-    return render_template('address.html', **context)
-
-@app.route('/address/<aid>', methods=['POST'])
-@lastuser.requires_login
-def process_select_address(aid=None):
-    """
-    Process a new address.
+    Select an Address or enter a new one. Session must contain invoice id if it exists
     """
     form = AddressForm()
     if form.validate_on_submit():
-        address = Address()
-        form.populate_obj(address)
-        address.make_id()
-        address.user = g.user
+        address = Address(user=g.user)
         db.session.add(address)
+        form.populate_obj(address)
         db.session.commit()
+        session['workspace'] = workspace.name
         session['address'] = getattr(address, 'hashkey', None)
-        return redirect(url_for('select_payment'))
-    else:
-        flash("Please check your details and try again.", 'error')
-        return select_address(form=form)
+        session['invoice'] = invoice.id
+        print "SESSION WORKSPACE:", session['workspace']
+        print "SESSION ADDRESS:", session['address']
+        print "SESSION INVOICE:", session['invoice']
+        return redirect(url_for('confirm_payment'))
+    addresses = Address.get(g.user)
+    return render_template('address.html',
+        form=form, invoice=invoice, workspace=workspace, addresses=addresses)
 
-@app.route('/address/select/<aid>')
+
+@app.route('/<workspace>/invoices/<invoice>/address/select/<aid>', methods=['GET', 'POST'])
+@load_models(
+    (Workspace, {'name': 'workspace'}, 'workspace'),
+    (Invoice, {'url_name': 'invoice', 'workspace': 'workspace'}, 'invoice'),
+    (Address, {'hashkey': 'aid'}, 'address')
+    )
 @lastuser.requires_login
-def select_existing_address(aid):
+def select_existing_address(workspace, invoice, address):
     """
     Process an existing address.
     """
-    address = Address.query.get(hashkey=aid).first()
-    session['address'] = getattr(address, 'hashkey', None)
-    return redirect(url_for('select_payment'))
+    session['workspace'] = workspace.name
+    session['invoice'] = invoice.id
+    session['address'] = address.hashkey
+    return redirect(url_for('confirm_payment'))
 
-@app.route('/address/delete/<aid>')
+
+
+@app.route('/<workspace>/invoices/<invoice>/billaddress/delete/<aid>', methods=['GET', 'POST'])
+@load_models(
+    (Workspace, {'name': 'workspace'}, 'workspace'),
+    (Invoice, {'url_name': 'invoice', 'workspace': 'workspace'}, 'invoice'),
+    (Address, {'id': 'aid'}, 'address')
+    )
 @lastuser.requires_login
-def delete_address(aid):
+def delete_address(workspace, invoice, address):
     """
     Delete an address
     """
-    address = Address.query.get(aid)
-    address.delete()
-    if request.referrer:
-        next = request.referrer
-    else:
-        next = url_for(index)
-    return redirect()
+    return render_delete_sqla(address, db, title=u"Confirm delete",
+        message=u"Delete Address '%s'?" % address.address,
+        success=u"You have deleted '%s'." % address.address,
+        next=url_for('select_address', workspace=workspace.name, invoice=invoice.url_name))
 
 
-@app.route('/address/edit/<aid>')
+
+@app.route('/address/edit/<aid>', methods=['GET', 'POST'])
 @lastuser.requires_login
-def edit_address(aid, form=None):
-    address = Address.query.get(hashkey=aid).first()
-    if form is None:
-        form = AddressForm(obj=address)
-    context = {
-        'form': form,
-        'title': 'Edit Address',
-    }
-    return render_template('edit_address.html', **context)
-
-@app.route('/address/edit/<aid>', methods=['POST'])
-@lastuser.requires_login
-def process_edit_address(aid):
-    """
-    Edit an existing address
-    """
-    address = Address.query,get(hashkey=aid).first()
+def edit_address(aid):
+    address = Address.query.filter_by(hashkey=aid).first()
     form = AddressForm(obj=address)
     if form.validate_on_submit():
+        if address is None:
+            address=Address()
+            address.user = g.user
+            db.session.add(address)
         form.populate_obj(address)
-        address.user = g.user
         db.session.commit()
-        session['address'] = getattr(address, 'hashkey', None)
+        return redirect(url_for('confirm_payment'))
+    return render_template('address.html', 
+        user=g.user, 
+        addresses=Address.query.filter_by(user=g.user),
+        form=form,
+        title='Select Billing Address')
 
-        return redirect(url_for('select_payment'))
-    else:
-        flash("Please check your details and try again.", 'error')
-        return edit_address(address.hashkey, form=form)
 
-@app.route('/payment')
+
+@app.route('/confirm')
 @lastuser.requires_login
-def select_payment():
+def confirm_payment():
     """
     Confirm details and make a payment.
     """
-    aid = session.get('address', None)
-    if aid is None:
-        return redirect(url_for('select_address'))
-    address = Address.query.filter_by(hashkey=aid).first()
-    context = {
-        'user': g.user,
-        'address': address,
-        'title': 'Confirm Details',
-    }
-    return render_template('payment.html', **context)
+    workspace = Workspace.get(session['workspace'])
+    address = Address.get_by_hashkey(session['address']).first()
+    invoice = Invoice.get_by_id(workspace, session['invoice'])
+    return render_template('confirm.html', invoice=invoice, address=address, workflow=invoice.workflow())
+
 
 @app.route('/response/ebs')
 @lastuser.requires_login
@@ -133,12 +124,9 @@ def ebs_response():
     for item in decrypted.split('&'):
         oneitem = item.split('=')
         response_split[oneitem[0]] = oneitem[1]
-    pay = Payment()
-    pay.response = response_split
-    db.session.add(pay)
+    payment = Payment()
+    payment.response = response_split
+    db.session.add(payment)
     db.session.commit()
-    context = {
-        'data': data,
-        'response': response_split,
-    }
-    return render_template('thanks.html', **context)
+    return render_template('thanks.html', data=data, response=response_split)
+

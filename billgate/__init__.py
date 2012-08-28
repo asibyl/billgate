@@ -17,12 +17,9 @@ lastuser = LastUser()
 #Prepare assets
 
 assets = Environment(app)
-js = Bundle('js/libs/jquery-1.5.1.min.js',
-            'js/libs/jquery.form.js',
-            'js/scripts.js',
+js = Bundle(baseframe_js,
             filters='jsmin', output='js/packed.js')
-css = Bundle(baseframe_css,
-             'css/app.css')
+css = Bundle(baseframe_css, 'css/app.css')
 
 # Configure the app
 def init_for(env):

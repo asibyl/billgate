@@ -10,6 +10,8 @@ from coaster.views import get_next_url
 from billgate import app, lastuser
 from billgate.models import db, User
 
+lastuser.init_usermanager(UserManager(db, User))
+
 
 @app.route('/login')
 @lastuser.login_handler
