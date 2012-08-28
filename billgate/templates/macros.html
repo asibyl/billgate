@@ -106,7 +106,7 @@
           <td data-field="taxrate" data-value="{{ lineitem.categorytax_rate }}" class="num">{{ lineitem.category.tax_rate }} %</td>
           <td data-field="total" data-value="{{ lineitem.line_total }}" class="num">{{ lineitem.line_total|format_currency }}
           {%- if editlinks and workflow.can_edit() %}
-            <a href="{{ url_for('line_item_delete', workspace=invoice.workspace.name, invoice=invoice.url_name, line_item=lineitem.id) }}" class="link-util expense-delete no-print" data-id="{{ lineitem.id }}" title="Delete"><i class="icon-remove"></i></a>
+            <a href="{{ url_for('line_item_delete', workspace=invoice.workspace.name, invoice=invoice.url_name, line_item=lineitem.id) }}" class="link-util lineitem-delete no-print" data-id="{{ lineitem.id }}" title="Delete"><i class="icon-remove"></i></a>
           {%- endif %}
           </td>
         </tr>

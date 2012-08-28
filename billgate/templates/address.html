@@ -39,8 +39,8 @@
     <div class="span7">
      	<h4>{{ form.name.label(class="span2") }}</h4> {{ form.name(class="span4") }}
         {%- for e in form.name.errors %}
-         	<p class="help-block">{{ e }}</p>
-         {% endfor %}
+         	<span class="help-block">{{ e }}</span>
+        {% endfor %}
      </div>
      <div class="span7">
      	<h4>{{ form.address.label(class="span2") }}</h4> {{ form.address(class="span4") }}
@@ -52,25 +52,25 @@
      	<h4>{{ form.city.label(class="span2") }}</h4> {{ form.city(class="span4") }}
         {%- for e in form.city.errors %}
          	<p class="help-block">{{ e }}</p>
-         {% endfor %}
+        {% endfor %}
      </div>
      <div class="span7">
      	<h4>{{ form.state.label(class="span2") }}</h4> {{ form.state(class="span4") }}
         {%- for e in form.state.errors %}
          	<p class="help-block">{{ e }}</p>
-         {% endfor %}
+        {% endfor %}
      </div>
      <div class="span7">
      	<h4>{{ form.postal_code.label(class="span2") }}</h4> {{ form.postal_code(class="span4") }}
         {%- for e in form.postal_code.errors %}
          	<p class="help-block">{{ e }}</p>
-         {% endfor %}
+        {% endfor %}
      </div>
      <div class="span7">
      	<h4>{{ form.country.label(class="span2") }}</h4> {{ form.country(class="span4") }}
         {%- for e in form.country.errors %}
          	<p class="help-block">{{ e }}</p>
-         {% endfor %}
+        {% endfor %}
      </div>
     
 
